@@ -1,0 +1,81 @@
+{
+  "paper_protocol": {
+    "calibration": {
+      "parser_mode": "repairing",
+      "token_cutoff": 2048,
+      "temperature": 0.1,
+      "samples_per_model": 1000
+    },
+    "decorrelation": {
+      "parser_mode": "repairing",
+      "token_cutoff": 2048,
+      "samples": 10000
+    },
+    "strict_run": {
+      "parser_mode": "red_flagging",
+      "token_cutoff": 750,
+      "temperature_first": 0.0,
+      "temperature_followup": 0.1,
+      "parallel_votes": 3,
+      "ahead_k": 3
+    }
+  },
+  "models_evaluated": [
+    "gemma3:1b"
+  ],
+  "calibration_results": [
+    {
+      "model_id": "gemma3:1b",
+      "p_step": 0.0,
+      "valid_rate": 0.055,
+      "k_min": -1
+    }
+  ],
+  "best_model": "gemma3:1b",
+  "best_model_decorrelation": {
+    "samples": 10000,
+    "both_wrong_collisions": 22
+  },
+  "parser_collision_comparison": [
+    {
+      "parser_mode": "repairing",
+      "token_cutoff": 700,
+      "samples": 2000,
+      "both_wrong_collisions": 0
+    },
+    {
+      "parser_mode": "red_flagging",
+      "token_cutoff": 700,
+      "samples": 2000,
+      "both_wrong_collisions": 0
+    },
+    {
+      "parser_mode": "repairing",
+      "token_cutoff": 750,
+      "samples": 2000,
+      "both_wrong_collisions": 0
+    },
+    {
+      "parser_mode": "red_flagging",
+      "token_cutoff": 750,
+      "samples": 2000,
+      "both_wrong_collisions": 0
+    },
+    {
+      "parser_mode": "repairing",
+      "token_cutoff": 2048,
+      "samples": 2000,
+      "both_wrong_collisions": 0
+    },
+    {
+      "parser_mode": "red_flagging",
+      "token_cutoff": 2048,
+      "samples": 2000,
+      "both_wrong_collisions": 0
+    }
+  ],
+  "warnings": [
+    "k theorem assumes p_step > 0.5; fallback to k=3 used if not satisfied"
+  ],
+  "output_profile": "configs\\paper_validated_strict.yaml"
+}

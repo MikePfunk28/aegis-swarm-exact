@@ -1,0 +1,25 @@
+models:
+  - name: gemma3_1b
+    provider: ollama
+    model_id: gemma3:1b
+    role: leader
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 2048
+    expert: general
+    routing_weight: 1.0
+ahead_k: 3
+parallel_votes: 3
+workflow_mode: swarm
+max_agents: 3
+min_agents: 1
+auto_scale_agents: true
+moe_enabled: true
+expert_rotation: [planner, executor, verifier, general]
+tools_enabled: false
+tool_budget_per_vote: 1
+allowed_shell_commands: []
+parser_mode: repairing
+red_flag_token_cutoff: 2048
+graph_memory_enabled: true

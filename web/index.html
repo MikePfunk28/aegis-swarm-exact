@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MDAP Swarm Console</title>
+  <style>
+    :root {
+      --bg-a: #f7f0df;
+      --bg-b: #c8e3ea;
+      --ink: #132730;
+      --card: #ffffffdd;
+      --accent: #0f766e;
+      --accent-2: #0e9f6e;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Source Sans 3", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 20% 0%, var(--bg-b), var(--bg-a));
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .card {
+      width: min(980px, 96vw);
+      background: var(--card);
+      border: 1px solid #c2cfde;
+      border-radius: 16px;
+      box-shadow: 0 14px 30px #4f5f7f26;
+      padding: 18px;
+    }
+    h1 { margin-top: 0; margin-bottom: 8px; }
+    .muted { opacity: 0.8; margin-top: 0; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+    button {
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      margin-top: 12px;
+      border: 1px solid #b9c9d6;
+      border-radius: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .reply {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px dashed #8ca0b6;
+      background: #f9fcff;
+    }
+    .section { margin-top: 14px; border-top: 1px solid #c6d7e0; padding-top: 14px; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      border: 1px solid #b9c9d6;
+      border-radius: 8px;
+      padding: 8px;
+      box-sizing: border-box;
+      background: #fff;
+    }
+    .result {
+      margin-top: 10px;
+      font-family: Consolas, "Courier New", monospace;
+      background: #0f172a;
+      color: #dff3ff;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 72px;
+      white-space: pre-wrap;
+    }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>MDAP Swarm Console</h1>
+    <p class="muted">UI included: voice + benchmark runner + workflow controls.</p>
+
+    <div class="section">
+      <h3>Run Workflow</h3>
+      <div class="grid">
+        <div>
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="benchmark">benchmark</option>
+            <option value="solve">solve</option>
+          </select>
+        </div>
+        <div>
+          <label for="workflow">Workflow</label>
+          <select id="workflow">
+            <option value="swarm">swarm</option>
+            <option value="hivemind">hivemind</option>
+            <option value="graph">graph</option>
+            <option value="sequential">sequential</option>
+          </select>
+        </div>
+        <div><label for="disks">Disks</label><input id="disks" type="number" value="10" min="3"></div>
+        <div><label for="steps">Steps (benchmark)</label><input id="steps" type="number" value="250" min="10"></div>
+        <div><label for="agents">Max Agents</label><input id="agents" type="number" value="15" min="3" max="30"></div>
+        <div><label for="aheadK">Ahead-k</label><input id="aheadK" type="number" value="3" min="1" max="20"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button id="runBtn">Run</button>
+        <button id="loadBtn" class="secondary">Load Machine Profile</button>
+        <button id="healthBtn" class="secondary">Check Model Health</button>
+        <button id="runsBtn" class="secondary">Load Recent Runs</button>
+      </div>
+      <div class="split">
+        <div id="runResult" class="result">No runs yet.</div>
+        <div id="healthResult" class="result">Health not checked.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Voice Control</h3>
+      <p class="muted">Browser speech recognition (Google/Web Speech in Chrome/Edge) with local fallback response.</p>
+    <div class="row">
+      <button id="startBtn">Start Listening</button>
+      <button id="sendBtn" class="secondary">Send Transcript</button>
+    </div>
+    <textarea id="transcript" placeholder="Transcript appears here..."></textarea>
+    <div id="reply" class="reply">Reply will appear here.</div>
+    </div>
+  </main>
+
+  <script>
+    const transcriptEl = document.getElementById("transcript");
+    const replyEl = document.getElementById("reply");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const runResultEl = document.getElementById("runResult");
+    const healthResultEl = document.getElementById("healthResult");
+    let recog = null;
+
+    if (SpeechRecognition) {
+      recog = new SpeechRecognition();
+      recog.continuous = false;
+      recog.lang = "en-US";
+      recog.interimResults = true;
+      recog.onresult = (event) => {
+        const out = [];
+        for (let i = 0; i < event.results.length; i++) {
+          out.push(event.results[i][0].transcript);
+        }
+        transcriptEl.value = out.join(" ").trim();
+      };
+    }
+
+    document.getElementById("startBtn").onclick = () => {
+      if (!recog) {
+        replyEl.textContent = "SpeechRecognition API not available in this browser.";
+        return;
+      }
+      recog.start();
+      replyEl.textContent = "Listening...";
+    };
+
+    document.getElementById("sendBtn").onclick = async () => {
+      const transcript = transcriptEl.value.trim();
+      const res = await fetch("/api/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript })
+      });
+      const data = await res.json();
+      replyEl.textContent = (data.reply || "No reply") + (data.source ? ` (source: ${data.source})` : "");
+
+      const utter = new SpeechSynthesisUtterance(replyEl.textContent);
+      utter.rate = 1.02;
+      utter.pitch = 1.0;
+      speechSynthesis.speak(utter);
+    };
+
+    document.getElementById("loadBtn").onclick = async () => {
+      const res = await fetch("/api/ui-config");
+      const data = await res.json();
+      const r = data.machine.recommended;
+      document.getElementById("agents").value = String(r.worker_count + 1);
+      document.getElementById("aheadK").value = String(r.ahead_k);
+      runResultEl.textContent = JSON.stringify(data.machine, null, 2);
+    };
+
+    document.getElementById("runBtn").onclick = async () => {
+      runResultEl.textContent = "Running...";
+      const payload = {
+        mode: document.getElementById("mode").value,
+        workflow_mode: document.getElementById("workflow").value,
+        disks: Number(document.getElementById("disks").value || 10),
+        steps: Number(document.getElementById("steps").value || 250),
+        max_agents: Number(document.getElementById("agents").value || 15),
+        ahead_k: Number(document.getElementById("aheadK").value || 3),
+        parallel_votes: 3,
+      };
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      runResultEl.textContent = JSON.stringify(data, null, 2);
+    };
+
+    document.getElementById("healthBtn").onclick = async () => {
+      healthResultEl.textContent = "Checking...";
+      const res = await fetch("/api/health/models");
+      const data = await res.json();
+      healthResultEl.textContent = JSON.stringify(data, null, 2);
+    };
+
+    document.getElementById("runsBtn").onclick = async () => {
+      runResultEl.textContent = "Loading recent runs...";
+      const res = await fetch("/api/runs?limit=20");
+      const data = await res.json();
+      runResultEl.textContent = JSON.stringify(data, null, 2);
+    };
+  </script>
+</body>
+</html>
+    button.secondary {
+      background: #2e4a53;
+    }

@@ -1,0 +1,28 @@
+[project]
+name = "mdap-small-swarm"
+version = "0.1.0"
+description = "MAKER-style MDAP orchestration with <=3B open models"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.116.0",
+  "httpx>=0.28.0",
+  "pydantic>=2.11.0",
+  "pyyaml>=6.0.2",
+  "typer>=0.17.0",
+  "uvicorn>=0.35.0",
+]
+
+[project.scripts]
+mdap-small = "mdap_small.cli:app"
+mdap-small-server = "mdap_small.server:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

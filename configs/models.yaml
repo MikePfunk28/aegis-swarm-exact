@@ -1,0 +1,170 @@
+ahead_k: 3
+parallel_votes: 3
+workflow_mode: swarm
+min_agents: 8
+max_agents: 15
+auto_scale_agents: true
+moe_enabled: true
+expert_rotation: [planner, executor, verifier, general]
+tools_enabled: false
+tool_budget_per_vote: 1
+allowed_shell_commands: [python, ollama, git, mdap-small]
+parser_mode: red_flagging
+red_flag_token_cutoff: 750
+graph_memory_enabled: true
+models:
+  - name: lfm2_1p2b
+    provider: ollama
+    model_id: LFM2.5-1.2B
+    role: leader
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: planner
+
+  - name: gemma3_270m_01
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_02
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_03
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_04
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_05
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_06
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_07
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_08
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_09
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: gemma3_270m_10
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+
+  - name: qwen3_1p7b
+    provider: ollama
+    model_id: qwen3:1.7b
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: verifier
+  - name: gemma3_1b
+    provider: ollama
+    model_id: gemma3:1b
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: general
+  - name: gemma3_270m
+    provider: ollama
+    model_id: gemma3:270m-it
+    role: worker
+    enabled: true
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: executor
+  - name: nanbeige4p1_3b
+    provider: ollama
+    model_id: nanbeige4.1:3b
+    role: worker
+    enabled: false
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: verifier
+  - name: ministral3_3b
+    provider: ollama
+    model_id: ministral3:3b
+    role: worker
+    enabled: false
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: general
+  - name: ministral3_7b
+    provider: ollama
+    model_id: ministral3:7b
+    role: worker
+    enabled: false
+    temperature_first: 0.0
+    temperature_followup: 0.1
+    max_tokens: 750
+    expert: verifier
