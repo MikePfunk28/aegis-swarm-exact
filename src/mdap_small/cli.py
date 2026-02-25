@@ -177,6 +177,9 @@ def paper_calibrate(
         f"samples={result.samples} "
         f"p_step={result.p_step:.6f} "
         f"valid_rate={result.valid_rate:.6f} "
+        f"correct={result.correct_count} "
+        f"parse_failures={result.parse_failures} "
+        f"request_failures={result.request_failures} "
         f"collisions={result.both_wrong_collisions} "
         f"k_min={result.k_min_for_target}"
     )
@@ -431,6 +434,9 @@ def paper_validate_exact(
             f"model={row.model_id} "
             f"p_step={row.p_step:.6f} "
             f"valid_rate={row.valid_rate:.6f} "
+            f"correct={row.correct_count} "
+            f"parse_failures={row.parse_failures} "
+            f"request_failures={row.request_failures} "
             f"k_min={row.k_min_for_target}"
         )
 
@@ -536,6 +542,9 @@ def paper_validate_exact(
                 "model_id": r.model_id,
                 "p_step": r.p_step,
                 "valid_rate": r.valid_rate,
+                "correct_count": r.correct_count,
+                "parse_failures": r.parse_failures,
+                "request_failures": r.request_failures,
                 "k_min": r.k_min_for_target,
             }
             for r in calibration_rows

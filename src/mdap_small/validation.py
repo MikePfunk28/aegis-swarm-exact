@@ -21,6 +21,9 @@ class CalibrationResult:
     max_tokens: int
     p_step: float
     valid_rate: float
+    correct_count: int
+    parse_failures: int
+    request_failures: int
     both_wrong_collisions: int
     k_min_for_target: int
 
@@ -78,7 +81,7 @@ async def estimate_single_step_success(
     picks = [random.randrange(0, len(trace)) for _ in range(samples)]
     sem = asyncio.Semaphore(max(1, concurrency))
 
-    async def one_eval(idx: int) -> tuple[bool, bool]:
+    async def one_eval(idx: int) -> str:
         step_idx, state, prev_move, expected_move, expected_state = trace[idx]
         prompt = build_step_prompt(
             runtime=runtime,
@@ -95,15 +98,15 @@ async def estimate_single_step_success(
                     timeout=request_timeout_s,
                 )
             except Exception:
-                return (False, False)
+                return "request_error"
         parsed = parse_step(output, parser_mode="repairing")
         if not parsed:
-            return (False, False)
+            return "parse_error"
         ok = (
             parsed.move.as_tuple() == expected_move
             and parsed.next_state == expected_state
         )
-        return (True, ok)
+        return "correct" if ok else "wrong"
 
     async def one_collision(idx: int) -> bool:
         step_idx, state, prev_move, expected_move, expected_state = trace[idx]
@@ -146,8 +149,10 @@ async def estimate_single_step_success(
         return (not ok_a) and (not ok_b)
 
     eval_results = await asyncio.gather(*(one_eval(i) for i in picks))
-    valid = sum(1 for v, _ in eval_results if v)
-    correct = sum(1 for _, ok in eval_results if ok)
+    request_failures = sum(1 for r in eval_results if r == "request_error")
+    parse_failures = sum(1 for r in eval_results if r == "parse_error")
+    valid = sum(1 for r in eval_results if r in ("correct", "wrong"))
+    correct = sum(1 for r in eval_results if r == "correct")
     p_step = 0.0 if samples == 0 else correct / samples
     valid_rate = 0.0 if samples == 0 else valid / samples
 
@@ -175,6 +180,9 @@ async def estimate_single_step_success(
         max_tokens=2048,
         p_step=p_step,
         valid_rate=valid_rate,
+        correct_count=correct,
+        parse_failures=parse_failures,
+        request_failures=request_failures,
         both_wrong_collisions=both_wrong_collisions,
         k_min_for_target=km,
     )
