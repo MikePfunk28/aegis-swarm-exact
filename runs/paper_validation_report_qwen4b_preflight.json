@@ -1,0 +1,36 @@
+{
+  "paper_protocol": {
+    "calibration": {
+      "parser_mode": "repairing",
+      "token_cutoff": 2048,
+      "temperature": 0.1,
+      "samples_per_model": 1000
+    },
+    "decorrelation": {
+      "parser_mode": "repairing",
+      "token_cutoff": 2048,
+      "samples": 10000
+    },
+    "strict_run": {
+      "parser_mode": "red_flagging",
+      "token_cutoff": 750,
+      "temperature_first": 0.0,
+      "temperature_followup": 0.1,
+      "parallel_votes": 3,
+      "ahead_k": 3
+    }
+  },
+  "models_evaluated": [
+    "qwen3:4b"
+  ],
+  "preflight": [
+    {
+      "model_id": "qwen3:4b",
+      "ok": false,
+      "reason": "generate_failed: TimeoutError"
+    }
+  ],
+  "warnings": [
+    "no feasible models for exact validation"
+  ]
+}

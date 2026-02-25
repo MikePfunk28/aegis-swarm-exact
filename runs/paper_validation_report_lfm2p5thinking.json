@@ -21,17 +21,17 @@
     }
   },
   "models_evaluated": [
-    "gemma3:1b"
+    "lfm2.5-thinking:latest"
   ],
   "calibration_results": [
     {
-      "model_id": "gemma3:1b",
+      "model_id": "lfm2.5-thinking:latest",
       "p_step": 0.0,
       "valid_rate": 0.0,
       "k_min": -1
     }
   ],
-  "best_model": "gemma3:1b",
+  "best_model": "lfm2.5-thinking:latest",
   "best_model_decorrelation": {
     "samples": 10000,
     "both_wrong_collisions": 0
@@ -47,7 +47,7 @@
       "parser_mode": "red_flagging",
       "token_cutoff": 700,
       "samples": 2000,
-      "both_wrong_collisions": 0
+      "both_wrong_collisions": 7
     },
     {
       "parser_mode": "repairing",
@@ -77,5 +77,5 @@
   "warnings": [
     "k theorem assumes p_step > 0.5; fallback to k=3 used if not satisfied"
   ],
-  "output_profile": "configs\\paper_validated_strict.yaml"
+  "output_profile": "configs\\paper_validated_strict_lfm2p5thinking.yaml"
 }

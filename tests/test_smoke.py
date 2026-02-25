@@ -9,6 +9,7 @@ from mdap_small.models import DEFAULT_MODELS
 from mdap_small.red_flags import has_red_flags, parse_step
 from mdap_small.server import app
 from mdap_small.validation import paper_strict_profile
+from mdap_small.validation_gate import load_and_check_report
 
 
 class HistoryTests(unittest.TestCase):
@@ -45,6 +46,12 @@ class ApiTests(unittest.TestCase):
         health_payload = health.json()
         self.assertIn("models", health_payload)
 
+        gate = client.get("/api/validation/status")
+        self.assertEqual(gate.status_code, 200)
+        gate_payload = gate.json()
+        self.assertIn("ok", gate_payload)
+        self.assertIn("requirements", gate_payload)
+
 
 class ParserTests(unittest.TestCase):
     def test_parse_step_two_line_format(self):
@@ -75,6 +82,14 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(strict.parser_mode, "red_flagging")
         self.assertEqual(strict.red_flag_token_cutoff, 750)
         self.assertEqual(strict.ahead_k, 3)
+
+
+class ValidationGateTests(unittest.TestCase):
+    def test_gate_fails_missing_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            status = load_and_check_report(Path(tmp) / "missing.json")
+            self.assertFalse(status.ok)
+            self.assertTrue(status.messages)
 
 
 if __name__ == "__main__":

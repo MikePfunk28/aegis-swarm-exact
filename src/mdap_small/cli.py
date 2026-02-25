@@ -8,7 +8,7 @@ import yaml
 from mdap_small.adapter import OllamaAdapter
 from mdap_small.integrations import detect_strandsagents, detect_voiceai
 from mdap_small.maths import k_min
-from mdap_small.models import DEFAULT_MODELS, RuntimeSpec
+from mdap_small.models import DEFAULT_MODELS, ModelSpec, RuntimeSpec
 from mdap_small.orchestrator import MakerOrchestrator
 from mdap_small.strands_bridge import LocalModelSelector
 from mdap_small.validation import (
@@ -25,6 +25,28 @@ def _load_runtime(config: Path | None) -> RuntimeSpec:
         return DEFAULT_MODELS
     raw = yaml.safe_load(config.read_text(encoding="utf-8"))
     return RuntimeSpec(**raw)
+
+
+async def _probe_model_feasibility(
+    model_id: str,
+    timeout_s: float,
+) -> tuple[bool, str]:
+    adapter = OllamaAdapter()
+    probe = ModelSpec(name=model_id.replace(":", "_"), model_id=model_id, role="worker")
+    prompt = "Reply with exactly: ok"
+    try:
+        out = await asyncio.wait_for(
+            adapter.generate(probe, prompt, 0.0), timeout=timeout_s
+        )
+    except Exception as exc:
+        msg = str(exc).strip() or exc.__class__.__name__
+        if "requires more system memory" in msg.lower():
+            return (False, f"insufficient_memory: {msg}")
+        return (False, f"generate_failed: {msg}")
+
+    if not out.strip():
+        return (False, "empty_response")
+    return (True, "ok")
 
 
 @app.command()
@@ -309,6 +331,8 @@ def paper_validate_exact(
     request_timeout_s: float = typer.Option(45.0, min=0.5, max=240.0),
     max_params_b: float = typer.Option(3.0, min=0.1),
     max_models: int = typer.Option(4, min=1),
+    model_name: str | None = typer.Option(None),
+    preflight_timeout_s: float = typer.Option(20.0, min=1.0, max=120.0),
     token_cutoffs: str = typer.Option("700,750,2048"),
     output_profile: Path = typer.Option(Path("configs/paper_validated_strict.yaml")),
     output_report: Path = typer.Option(Path("runs/paper_validation_report.json")),
@@ -318,14 +342,17 @@ def paper_validate_exact(
     runtime = _load_runtime(config)
     runtime.tools_enabled = False
 
-    selector = LocalModelSelector()
-    eligible = set(
-        asyncio.run(selector.recommend_swarm_candidates(max_params_b=max_params_b))
-    )
-    active = runtime.active_models()
-    candidates = [m.model_id for m in active if m.model_id in eligible]
-    if not candidates:
-        candidates = [m.model_id for m in active]
+    if model_name:
+        candidates = [model_name]
+    else:
+        selector = LocalModelSelector()
+        eligible = set(
+            asyncio.run(selector.recommend_swarm_candidates(max_params_b=max_params_b))
+        )
+        active = runtime.active_models()
+        candidates = [m.model_id for m in active if m.model_id in eligible]
+        if not candidates:
+            candidates = [m.model_id for m in active]
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -336,8 +363,55 @@ def paper_validate_exact(
         seen.add(model_id)
     candidates = deduped[:max_models]
 
-    calibration_rows = []
+    preflight = []
+    feasible_candidates: list[str] = []
     for model_id in candidates:
+        ok, reason = asyncio.run(
+            _probe_model_feasibility(
+                model_id=model_id,
+                timeout_s=preflight_timeout_s,
+            )
+        )
+        preflight.append({"model_id": model_id, "ok": ok, "reason": reason})
+        if ok:
+            feasible_candidates.append(model_id)
+            print(f"paper_validate_preflight model={model_id} ok=true")
+        else:
+            print(f"paper_validate_preflight model={model_id} ok=false reason={reason}")
+
+    if not feasible_candidates:
+        report = {
+            "paper_protocol": {
+                "calibration": {
+                    "parser_mode": "repairing",
+                    "token_cutoff": 2048,
+                    "temperature": open_source_temperature,
+                    "samples_per_model": calibration_samples,
+                },
+                "decorrelation": {
+                    "parser_mode": "repairing",
+                    "token_cutoff": 2048,
+                    "samples": decorrelation_samples,
+                },
+                "strict_run": {
+                    "parser_mode": "red_flagging",
+                    "token_cutoff": 750,
+                    "temperature_first": 0.0,
+                    "temperature_followup": 0.1,
+                    "parallel_votes": 3,
+                    "ahead_k": 3,
+                },
+            },
+            "models_evaluated": candidates,
+            "preflight": preflight,
+            "warnings": ["no feasible models for exact validation"],
+        }
+        output_report.parent.mkdir(parents=True, exist_ok=True)
+        output_report.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        raise typer.Exit(code=2)
+
+    calibration_rows = []
+    for model_id in feasible_candidates:
         row = asyncio.run(
             estimate_single_step_success(
                 runtime=runtime,
@@ -455,7 +529,8 @@ def paper_validate_exact(
                 "ahead_k": recommended_k,
             },
         },
-        "models_evaluated": candidates,
+        "models_evaluated": feasible_candidates,
+        "preflight": preflight,
         "calibration_results": [
             {
                 "model_id": r.model_id,

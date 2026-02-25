@@ -262,7 +262,9 @@ def _select_model(runtime: RuntimeSpec, model_name: str | None) -> ModelSpec:
         for model in active:
             if model.name == model_name or model.model_id == model_name:
                 return model
-        raise ValueError(f"model not found: {model_name}")
+        return ModelSpec(
+            name=model_name.replace(":", "_"), model_id=model_name, role="worker"
+        )
     leader = runtime.leader_model()
     return leader or active[0]
 

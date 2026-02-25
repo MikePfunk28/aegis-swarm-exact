@@ -21,51 +21,51 @@
     }
   },
   "models_evaluated": [
-    "gemma3:1b"
+    "gemma3:1b-it-qat"
   ],
   "calibration_results": [
     {
-      "model_id": "gemma3:1b",
+      "model_id": "gemma3:1b-it-qat",
       "p_step": 0.0,
       "valid_rate": 0.0,
       "k_min": -1
     }
   ],
-  "best_model": "gemma3:1b",
+  "best_model": "gemma3:1b-it-qat",
   "best_model_decorrelation": {
     "samples": 10000,
-    "both_wrong_collisions": 0
+    "both_wrong_collisions": 6
   },
   "parser_collision_comparison": [
     {
       "parser_mode": "repairing",
       "token_cutoff": 700,
       "samples": 2000,
-      "both_wrong_collisions": 0
+      "both_wrong_collisions": 2
     },
     {
       "parser_mode": "red_flagging",
       "token_cutoff": 700,
       "samples": 2000,
-      "both_wrong_collisions": 0
+      "both_wrong_collisions": 21
     },
     {
       "parser_mode": "repairing",
       "token_cutoff": 750,
       "samples": 2000,
-      "both_wrong_collisions": 0
+      "both_wrong_collisions": 26
     },
     {
       "parser_mode": "red_flagging",
       "token_cutoff": 750,
       "samples": 2000,
-      "both_wrong_collisions": 0
+      "both_wrong_collisions": 26
     },
     {
       "parser_mode": "repairing",
       "token_cutoff": 2048,
       "samples": 2000,
-      "both_wrong_collisions": 0
+      "both_wrong_collisions": 31
     },
     {
       "parser_mode": "red_flagging",
@@ -77,5 +77,5 @@
   "warnings": [
     "k theorem assumes p_step > 0.5; fallback to k=3 used if not satisfied"
   ],
-  "output_profile": "configs\\paper_validated_strict.yaml"
+  "output_profile": "configs\\paper_validated_strict_gemma_qat.yaml"
 }

@@ -41,7 +41,17 @@ class OllamaAdapter:
         }
         async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(f"{self.base_url}/api/generate", json=payload)
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                detail = ""
+                try:
+                    data = resp.json()
+                    if isinstance(data, dict):
+                        detail = str(data.get("error") or data)
+                except Exception:
+                    detail = resp.text.strip()
+                raise RuntimeError(
+                    f"ollama_generate_failed status={resp.status_code} detail={detail}"
+                )
             data = resp.json()
             return data.get("response", "")
 
@@ -67,7 +77,10 @@ class OllamaAdapter:
                 json=payload,
                 headers=headers,
             )
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                raise RuntimeError(
+                    f"openai_compat_generate_failed status={resp.status_code} detail={resp.text.strip()}"
+                )
             data = resp.json()
             choices = data.get("choices", [])
             if not choices:

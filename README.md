@@ -68,6 +68,8 @@ Run paper-style exact validation protocol (calibration + 10K decorrelation + par
 mdap-small paper-validate-exact --disks 20 --calibration-samples 1000 --decorrelation-samples 10000 --output-profile configs/paper_validated_strict.yaml --output-report runs/paper_validation_report.json
 ```
 
+The exact validator now runs a model preflight first and records per-model feasibility reasons (for example, insufficient memory) in the report before calibration starts.
+
 Run full solve loop (streaming, no full-sequence preload):
 
 ```powershell

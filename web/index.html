@@ -3,148 +3,242 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MDAP Swarm Console</title>
+  <title>Aegis Swarm Exact</title>
   <style>
     :root {
-      --bg-a: #f7f0df;
-      --bg-b: #c8e3ea;
-      --ink: #132730;
-      --card: #ffffffdd;
-      --accent: #0f766e;
-      --accent-2: #0e9f6e;
+      --bg-1: #efe5d1;
+      --bg-2: #b5d8c2;
+      --ink: #13221f;
+      --panel: #fffdf8ee;
+      --line: #a8b9ad;
+      --ok: #136f3d;
+      --warn: #8c5a00;
+      --bad: #a12424;
+      --act: #0f5f68;
+      --act-2: #2f4550;
     }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "Segoe UI", "Source Sans 3", sans-serif;
+      font-family: "Aptos", "Segoe UI", sans-serif;
       color: var(--ink);
-      background: radial-gradient(circle at 20% 0%, var(--bg-b), var(--bg-a));
+      background:
+        radial-gradient(circle at 15% 15%, #d7eadf 0%, transparent 35%),
+        radial-gradient(circle at 90% 0%, #d7d2b9 0%, transparent 30%),
+        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+      padding: 18px;
       display: grid;
       place-items: center;
-      padding: 16px;
     }
+    .shell {
+      width: min(1120px, 98vw);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 16px 30px #3b4f4c26;
+      overflow: hidden;
+    }
+    .top {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, #f8f2e5, #edf6f0);
+    }
+    h1 { margin: 0; font-size: 28px; }
+    .sub { margin: 6px 0 0; opacity: 0.85; }
+    .body { padding: 16px 18px 18px; display: grid; gap: 14px; }
+    .split { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; }
     .card {
-      width: min(980px, 96vw);
-      background: var(--card);
-      border: 1px solid #c2cfde;
-      border-radius: 16px;
-      box-shadow: 0 14px 30px #4f5f7f26;
-      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
     }
-    h1 { margin-top: 0; margin-bottom: 8px; }
-    .muted { opacity: 0.8; margin-top: 0; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+    .card h3 { margin: 0 0 10px; }
+    .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #b9c8be;
+      border-radius: 9px;
+      padding: 8px;
+      font: inherit;
+      background: #fff;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; }
     button {
       border: none;
       border-radius: 10px;
-      background: var(--accent);
+      padding: 9px 12px;
       color: #fff;
-      padding: 10px 14px;
+      background: var(--act);
       cursor: pointer;
+      font-weight: 600;
     }
-    textarea {
-      width: 100%;
-      min-height: 110px;
-      margin-top: 12px;
-      border: 1px solid #b9c9d6;
+    button.secondary { background: var(--act-2); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .mono {
+      margin-top: 8px;
       border-radius: 10px;
-      padding: 10px;
-      box-sizing: border-box;
-      font-family: inherit;
-    }
-    .reply {
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px dashed #8ca0b6;
-      background: #f9fcff;
-    }
-    .section { margin-top: 14px; border-top: 1px solid #c6d7e0; padding-top: 14px; }
-    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-    input, select {
-      width: 100%;
-      border: 1px solid #b9c9d6;
-      border-radius: 8px;
-      padding: 8px;
-      box-sizing: border-box;
-      background: #fff;
-    }
-    .result {
-      margin-top: 10px;
-      font-family: Consolas, "Courier New", monospace;
       background: #0f172a;
       color: #dff3ff;
-      border-radius: 10px;
       padding: 10px;
-      min-height: 72px;
+      min-height: 90px;
       white-space: pre-wrap;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
     }
-    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+    .status {
+      border-radius: 10px;
+      border: 1px solid;
+      padding: 9px;
+      font-weight: 600;
+    }
+    .ok { color: var(--ok); border-color: #8bc7a3; background: #eefaf2; }
+    .warn { color: var(--warn); border-color: #ddc391; background: #fff8eb; }
+    .bad { color: var(--bad); border-color: #e2a1a1; background: #fff1f1; }
+    textarea { min-height: 100px; }
+    .tiny { font-size: 12px; opacity: 0.8; }
+    @media (max-width: 980px) { .split { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>MDAP Swarm Console</h1>
-    <p class="muted">UI included: voice + benchmark runner + workflow controls.</p>
-
-    <div class="section">
-      <h3>Run Workflow</h3>
-      <div class="grid">
-        <div>
-          <label for="mode">Mode</label>
-          <select id="mode">
-            <option value="benchmark">benchmark</option>
-            <option value="solve">solve</option>
-          </select>
-        </div>
-        <div>
-          <label for="workflow">Workflow</label>
-          <select id="workflow">
-            <option value="swarm">swarm</option>
-            <option value="hivemind">hivemind</option>
-            <option value="graph">graph</option>
-            <option value="sequential">sequential</option>
-          </select>
-        </div>
-        <div><label for="disks">Disks</label><input id="disks" type="number" value="10" min="3"></div>
-        <div><label for="steps">Steps (benchmark)</label><input id="steps" type="number" value="250" min="10"></div>
-        <div><label for="agents">Max Agents</label><input id="agents" type="number" value="15" min="3" max="30"></div>
-        <div><label for="aheadK">Ahead-k</label><input id="aheadK" type="number" value="3" min="1" max="20"></div>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <button id="runBtn">Run</button>
-        <button id="loadBtn" class="secondary">Load Machine Profile</button>
-        <button id="healthBtn" class="secondary">Check Model Health</button>
-        <button id="runsBtn" class="secondary">Load Recent Runs</button>
-      </div>
+  <main class="shell">
+    <div class="top">
+      <h1>Aegis Swarm Exact</h1>
+      <p class="sub">Paper-gated swarm runner: workflows are blocked until 10K decorrelation and exact validation settings pass.</p>
+    </div>
+    <div class="body">
       <div class="split">
-        <div id="runResult" class="result">No runs yet.</div>
-        <div id="healthResult" class="result">Health not checked.</div>
-      </div>
-    </div>
+        <section class="card">
+          <h3>Swarm Run</h3>
+          <div class="grid">
+            <div>
+              <label for="mode">Mode</label>
+              <select id="mode"><option value="benchmark">benchmark</option><option value="solve">solve</option></select>
+            </div>
+            <div>
+              <label for="workflow">Workflow</label>
+              <select id="workflow"><option value="swarm">swarm</option><option value="hivemind">hivemind</option><option value="graph">graph</option><option value="sequential">sequential</option></select>
+            </div>
+            <div><label for="disks">Disks</label><input id="disks" type="number" value="12" min="3"></div>
+            <div><label for="steps">Steps (benchmark)</label><input id="steps" type="number" value="100" min="10"></div>
+            <div><label for="agents">Max Agents</label><input id="agents" type="number" value="15" min="3" max="30"></div>
+            <div><label for="aheadK">Ahead-k</label><input id="aheadK" type="number" value="3" min="3" max="50"></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button id="runBtn">Run Swarm</button>
+            <button id="loadBtn" class="secondary">Load Machine Profile</button>
+            <button id="healthBtn" class="secondary">Model Health</button>
+            <button id="runsBtn" class="secondary">Recent Runs</button>
+          </div>
+          <div id="runOut" class="mono">No run yet.</div>
+        </section>
 
-    <div class="section">
-      <h3>Voice Control</h3>
-      <p class="muted">Browser speech recognition (Google/Web Speech in Chrome/Edge) with local fallback response.</p>
-    <div class="row">
-      <button id="startBtn">Start Listening</button>
-      <button id="sendBtn" class="secondary">Send Transcript</button>
-    </div>
-    <textarea id="transcript" placeholder="Transcript appears here..."></textarea>
-    <div id="reply" class="reply">Reply will appear here.</div>
+        <section class="card">
+          <h3>Paper Gate</h3>
+          <div id="gateStatus" class="status warn">Checking validation gate...</div>
+          <div class="row" style="margin-top:8px">
+            <button id="gateBtn" class="secondary">Refresh Gate</button>
+          </div>
+          <div id="gateOut" class="mono">No validation report loaded.</div>
+          <p class="tiny">Required: calibration (repairing, 2048, temp 0.1, >=1000), decorrelation (10K), strict run (red_flagging, 750, 0/0.1, k>=3), and p_step &gt; 0.5.</p>
+        </section>
+      </div>
+
+      <section class="card">
+        <h3>Voice Control</h3>
+        <div class="row">
+          <button id="startBtn">Start Listening</button>
+          <button id="sendBtn" class="secondary">Send Transcript</button>
+        </div>
+        <textarea id="transcript" placeholder="Transcript appears here..."></textarea>
+        <div id="reply" class="mono">Reply will appear here.</div>
+      </section>
     </div>
   </main>
 
   <script>
-    const transcriptEl = document.getElementById("transcript");
-    const replyEl = document.getElementById("reply");
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const runResultEl = document.getElementById("runResult");
-    const healthResultEl = document.getElementById("healthResult");
-    let recog = null;
+    const byId = (id) => document.getElementById(id);
+    const runBtn = byId("runBtn");
+    const gateStatus = byId("gateStatus");
+    const gateOut = byId("gateOut");
+    const runOut = byId("runOut");
+    const replyEl = byId("reply");
+    const transcriptEl = byId("transcript");
 
+    function setGateUi(ok, text) {
+      gateStatus.className = `status ${ok ? "ok" : "bad"}`;
+      gateStatus.textContent = text;
+      runBtn.disabled = !ok;
+    }
+
+    async function refreshGate() {
+      gateOut.textContent = "Checking...";
+      try {
+        const res = await fetch("/api/validation/status");
+        const data = await res.json();
+        if (data.ok) {
+          setGateUi(true, "Validation gate PASS - exact paper profile is enforced.");
+        } else {
+          setGateUi(false, "Validation gate BLOCKED - run paper validation first.");
+        }
+        gateOut.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        setGateUi(false, "Validation gate unavailable.");
+        gateOut.textContent = String(err);
+      }
+    }
+
+    byId("gateBtn").onclick = refreshGate;
+
+    byId("loadBtn").onclick = async () => {
+      const res = await fetch("/api/ui-config");
+      const data = await res.json();
+      const r = data.machine.recommended;
+      byId("agents").value = String(r.worker_count + 1);
+      byId("aheadK").value = String(Math.max(3, r.ahead_k));
+      runOut.textContent = JSON.stringify(data.machine, null, 2);
+    };
+
+    byId("runBtn").onclick = async () => {
+      runOut.textContent = "Running...";
+      const payload = {
+        mode: byId("mode").value,
+        workflow_mode: byId("workflow").value,
+        disks: Number(byId("disks").value || 12),
+        steps: Number(byId("steps").value || 100),
+        max_agents: Number(byId("agents").value || 15),
+        ahead_k: Math.max(3, Number(byId("aheadK").value || 3)),
+        parallel_votes: 3,
+        enforce_paper_gate: true,
+      };
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      runOut.textContent = JSON.stringify(data, null, 2);
+      if (!res.ok) {
+        await refreshGate();
+      }
+    };
+
+    byId("healthBtn").onclick = async () => {
+      runOut.textContent = "Checking models...";
+      const res = await fetch("/api/health/models");
+      runOut.textContent = JSON.stringify(await res.json(), null, 2);
+    };
+
+    byId("runsBtn").onclick = async () => {
+      runOut.textContent = "Loading runs...";
+      const res = await fetch("/api/runs?limit=20");
+      runOut.textContent = JSON.stringify(await res.json(), null, 2);
+    };
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recog = null;
     if (SpeechRecognition) {
       recog = new SpeechRecognition();
       recog.continuous = false;
@@ -152,14 +246,12 @@
       recog.interimResults = true;
       recog.onresult = (event) => {
         const out = [];
-        for (let i = 0; i < event.results.length; i++) {
-          out.push(event.results[i][0].transcript);
-        }
+        for (let i = 0; i < event.results.length; i++) out.push(event.results[i][0].transcript);
         transcriptEl.value = out.join(" ").trim();
       };
     }
 
-    document.getElementById("startBtn").onclick = () => {
+    byId("startBtn").onclick = () => {
       if (!recog) {
         replyEl.textContent = "SpeechRecognition API not available in this browser.";
         return;
@@ -168,67 +260,18 @@
       replyEl.textContent = "Listening...";
     };
 
-    document.getElementById("sendBtn").onclick = async () => {
+    byId("sendBtn").onclick = async () => {
       const transcript = transcriptEl.value.trim();
       const res = await fetch("/api/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript })
+        body: JSON.stringify({ transcript }),
       });
       const data = await res.json();
       replyEl.textContent = (data.reply || "No reply") + (data.source ? ` (source: ${data.source})` : "");
-
-      const utter = new SpeechSynthesisUtterance(replyEl.textContent);
-      utter.rate = 1.02;
-      utter.pitch = 1.0;
-      speechSynthesis.speak(utter);
     };
 
-    document.getElementById("loadBtn").onclick = async () => {
-      const res = await fetch("/api/ui-config");
-      const data = await res.json();
-      const r = data.machine.recommended;
-      document.getElementById("agents").value = String(r.worker_count + 1);
-      document.getElementById("aheadK").value = String(r.ahead_k);
-      runResultEl.textContent = JSON.stringify(data.machine, null, 2);
-    };
-
-    document.getElementById("runBtn").onclick = async () => {
-      runResultEl.textContent = "Running...";
-      const payload = {
-        mode: document.getElementById("mode").value,
-        workflow_mode: document.getElementById("workflow").value,
-        disks: Number(document.getElementById("disks").value || 10),
-        steps: Number(document.getElementById("steps").value || 250),
-        max_agents: Number(document.getElementById("agents").value || 15),
-        ahead_k: Number(document.getElementById("aheadK").value || 3),
-        parallel_votes: 3,
-      };
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      runResultEl.textContent = JSON.stringify(data, null, 2);
-    };
-
-    document.getElementById("healthBtn").onclick = async () => {
-      healthResultEl.textContent = "Checking...";
-      const res = await fetch("/api/health/models");
-      const data = await res.json();
-      healthResultEl.textContent = JSON.stringify(data, null, 2);
-    };
-
-    document.getElementById("runsBtn").onclick = async () => {
-      runResultEl.textContent = "Loading recent runs...";
-      const res = await fetch("/api/runs?limit=20");
-      const data = await res.json();
-      runResultEl.textContent = JSON.stringify(data, null, 2);
-    };
+    refreshGate();
   </script>
 </body>
 </html>
-    button.secondary {
-      background: #2e4a53;
-    }

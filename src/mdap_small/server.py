@@ -4,6 +4,7 @@ import os
 import httpx
 import uvicorn
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -12,6 +13,7 @@ from mdap_small.history import append_run, get_recent_runs
 from mdap_small.integrations import detect_strandsagents, detect_voiceai
 from mdap_small.models import DEFAULT_MODELS
 from mdap_small.orchestrator import MakerOrchestrator
+from mdap_small.validation_gate import load_and_check_report
 
 app = FastAPI(title="MDAP Voice Bridge")
 
@@ -33,6 +35,7 @@ class RunRequest(BaseModel):
     tool_budget_per_vote: int = 1
     parser_mode: str = "red_flagging"
     red_flag_token_cutoff: int = 750
+    enforce_paper_gate: bool = True
 
 
 def _machine_profile() -> dict:
@@ -88,6 +91,27 @@ async def model_health():
     return {"ok": all_ok, "models": rows}
 
 
+@app.get("/api/validation/status")
+async def validation_status():
+    gate = load_and_check_report()
+    return {
+        "ok": gate.ok,
+        "report_path": gate.report_path,
+        "messages": gate.messages,
+        "summary": gate.summary,
+        "requirements": {
+            "calibration_samples_per_model_min": 1000,
+            "decorrelation_samples_min": 10000,
+            "strict_parser_mode": "red_flagging",
+            "strict_token_cutoff": 750,
+            "strict_temps": [0.0, 0.1],
+            "strict_parallel_votes_min": 3,
+            "strict_ahead_k_min": 3,
+            "best_p_step_gt": 0.5,
+        },
+    }
+
+
 @app.post("/api/respond")
 async def respond(req: VoiceRequest):
     text = req.transcript.strip()
@@ -123,6 +147,19 @@ async def respond(req: VoiceRequest):
 
 @app.post("/api/run")
 async def run_workflow(req: RunRequest):
+    if req.enforce_paper_gate:
+        gate = load_and_check_report()
+        if not gate.ok:
+            raise HTTPException(
+                status_code=428,
+                detail={
+                    "error": "paper_validation_gate_failed",
+                    "report_path": gate.report_path,
+                    "messages": gate.messages,
+                    "summary": gate.summary,
+                },
+            )
+
     runtime = DEFAULT_MODELS.model_copy(deep=True)
     runtime.ahead_k = req.ahead_k
     runtime.parallel_votes = req.parallel_votes
