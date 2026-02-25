@@ -1,4 +1,5 @@
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -51,6 +52,23 @@ class ApiTests(unittest.TestCase):
         gate_payload = gate.json()
         self.assertIn("ok", gate_payload)
         self.assertIn("requirements", gate_payload)
+
+    def test_validation_job_dry_run(self):
+        client = TestClient(app)
+        start = client.post("/api/validation/run", json={"dry_run": True})
+        self.assertEqual(start.status_code, 200)
+        payload = start.json()
+        self.assertTrue(payload.get("ok"))
+
+        status = None
+        for _ in range(20):
+            resp = client.get("/api/validation/job")
+            self.assertEqual(resp.status_code, 200)
+            status = resp.json().get("status")
+            if status in ("completed", "failed", "cancelled"):
+                break
+            time.sleep(0.05)
+        self.assertIn(status, ("completed", "failed", "cancelled"))
 
 
 class ParserTests(unittest.TestCase):

@@ -138,10 +138,23 @@
         <section class="card">
           <h3>Paper Gate</h3>
           <div id="gateStatus" class="status warn">Checking validation gate...</div>
+          <div class="grid" style="margin-top:8px">
+            <div>
+              <label for="valModel">Validation Model (optional)</label>
+              <input id="valModel" type="text" placeholder="e.g. qwen3:1.7b">
+            </div>
+            <div>
+              <label for="valTimeout">Request Timeout (s)</label>
+              <input id="valTimeout" type="number" value="8" min="1" max="120">
+            </div>
+          </div>
           <div class="row" style="margin-top:8px">
             <button id="gateBtn" class="secondary">Refresh Gate</button>
+            <button id="valRunBtn">Run Exact Validation</button>
+            <button id="valCancelBtn" class="secondary">Cancel Validation</button>
           </div>
           <div id="gateOut" class="mono">No validation report loaded.</div>
+          <div id="valOut" class="mono">No validation job yet.</div>
           <p class="tiny">Required: calibration (repairing, 2048, temp 0.1, >=1000), decorrelation (10K), strict run (red_flagging, 750, 0/0.1, k>=3), and p_step &gt; 0.5.</p>
         </section>
       </div>
@@ -163,6 +176,7 @@
     const runBtn = byId("runBtn");
     const gateStatus = byId("gateStatus");
     const gateOut = byId("gateOut");
+    const valOut = byId("valOut");
     const runOut = byId("runOut");
     const replyEl = byId("reply");
     const transcriptEl = byId("transcript");
@@ -191,6 +205,51 @@
     }
 
     byId("gateBtn").onclick = refreshGate;
+
+    async function pollValidationJob() {
+      try {
+        const res = await fetch("/api/validation/job?offset=0&limit=500");
+        const data = await res.json();
+        valOut.textContent = JSON.stringify(data, null, 2);
+        if (data.status === "running") {
+          if (!valPollTimer) {
+            valPollTimer = setInterval(pollValidationJob, 2000);
+          }
+        } else if (valPollTimer) {
+          clearInterval(valPollTimer);
+          valPollTimer = null;
+          await refreshGate();
+        }
+      } catch (err) {
+        valOut.textContent = String(err);
+      }
+    }
+
+    byId("valRunBtn").onclick = async () => {
+      const modelName = byId("valModel").value.trim();
+      const timeout = Number(byId("valTimeout").value || 8);
+      valOut.textContent = "Starting validation...";
+      const payload = {
+        model_name: modelName || null,
+        request_timeout_s: timeout,
+        lock_to_best_model: true,
+        dry_run: false,
+      };
+      const res = await fetch("/api/validation/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      valOut.textContent = JSON.stringify(data, null, 2);
+      await pollValidationJob();
+    };
+
+    byId("valCancelBtn").onclick = async () => {
+      const res = await fetch("/api/validation/cancel", { method: "POST" });
+      valOut.textContent = JSON.stringify(await res.json(), null, 2);
+      await pollValidationJob();
+    };
 
     byId("loadBtn").onclick = async () => {
       const res = await fetch("/api/ui-config");
@@ -272,6 +331,8 @@
     };
 
     refreshGate();
+    pollValidationJob();
   </script>
 </body>
 </html>
+    let valPollTimer = null;

@@ -1,3 +1,7 @@
+import asyncio
+import shlex
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 import os
 
@@ -36,6 +40,100 @@ class RunRequest(BaseModel):
     parser_mode: str = "red_flagging"
     red_flag_token_cutoff: int = 750
     enforce_paper_gate: bool = True
+
+
+class ValidationRunRequest(BaseModel):
+    model_name: str | None = None
+    disks: int = 20
+    calibration_samples: int = 1000
+    decorrelation_samples: int = 10000
+    concurrency: int = 16
+    request_timeout_s: float = 8.0
+    preflight_timeout_s: float = 20.0
+    token_cutoffs: str = "700,750,2048"
+    output_profile: str = "configs/paper_validated_strict.yaml"
+    output_report: str = "runs/paper_validation_report.json"
+    lock_to_best_model: bool = True
+    dry_run: bool = False
+
+
+_validation_job: dict = {
+    "id": None,
+    "status": "idle",
+    "started_at": None,
+    "finished_at": None,
+    "command": None,
+    "exit_code": None,
+    "log_lines": [],
+}
+_validation_task: asyncio.Task | None = None
+
+
+def _append_job_log(line: str) -> None:
+    line = line.rstrip("\n")
+    if not line:
+        return
+    _validation_job["log_lines"].append(line)
+    if len(_validation_job["log_lines"]) > 2000:
+        _validation_job["log_lines"] = _validation_job["log_lines"][-2000:]
+
+
+def _on_validation_task_done(_task: asyncio.Task) -> None:
+    global _validation_task
+    _validation_task = None
+
+
+async def _run_validation_subprocess(command: list[str]) -> None:
+    proc = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    assert proc.stdout is not None
+    try:
+        while True:
+            chunk = await proc.stdout.readline()
+            if not chunk:
+                break
+            _append_job_log(chunk.decode("utf-8", errors="replace"))
+        exit_code = await proc.wait()
+        _validation_job["exit_code"] = exit_code
+        _validation_job["status"] = "completed" if exit_code == 0 else "failed"
+        _validation_job["finished_at"] = datetime.now(timezone.utc).isoformat()
+    except asyncio.CancelledError:
+        proc.kill()
+        await proc.wait()
+        _append_job_log("job cancelled")
+        _validation_job["exit_code"] = -1
+        _validation_job["status"] = "cancelled"
+        _validation_job["finished_at"] = datetime.now(timezone.utc).isoformat()
+        raise
+
+
+async def _run_validation_dry() -> None:
+    _append_job_log("dry_run: starting paper validation")
+    await asyncio.sleep(0.2)
+    _append_job_log("dry_run: calibration complete")
+    await asyncio.sleep(0.2)
+    _append_job_log("dry_run: decorrelation complete")
+    await asyncio.sleep(0.2)
+    _append_job_log("dry_run: strict profile generated")
+    _validation_job["exit_code"] = 0
+    _validation_job["status"] = "completed"
+    _validation_job["finished_at"] = datetime.now(timezone.utc).isoformat()
+
+
+@app.post("/api/validation/cancel")
+async def validation_cancel():
+    global _validation_task
+    if _validation_job["status"] != "running" or _validation_task is None:
+        return {
+            "ok": False,
+            "status": _validation_job["status"],
+            "message": "no running job",
+        }
+    _validation_task.cancel()
+    return {"ok": True, "status": "cancelling", "job_id": _validation_job["id"]}
 
 
 def _machine_profile() -> dict:
@@ -109,6 +207,91 @@ async def validation_status():
             "strict_ahead_k_min": 3,
             "best_p_step_gt": 0.5,
         },
+    }
+
+
+@app.get("/api/validation/job")
+async def validation_job(offset: int = 0, limit: int = 200):
+    safe_offset = max(0, offset)
+    safe_limit = max(1, min(limit, 1000))
+    logs = _validation_job["log_lines"][safe_offset : safe_offset + safe_limit]
+    return {
+        "id": _validation_job["id"],
+        "status": _validation_job["status"],
+        "started_at": _validation_job["started_at"],
+        "finished_at": _validation_job["finished_at"],
+        "command": _validation_job["command"],
+        "exit_code": _validation_job["exit_code"],
+        "total_log_lines": len(_validation_job["log_lines"]),
+        "log_lines": logs,
+        "next_offset": safe_offset + len(logs),
+    }
+
+
+@app.post("/api/validation/run")
+async def validation_run(req: ValidationRunRequest):
+    global _validation_task
+    if _validation_job["status"] == "running":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "validation_job_already_running",
+                "job_id": _validation_job["id"],
+            },
+        )
+
+    job_id = str(uuid.uuid4())
+    _validation_job["id"] = job_id
+    _validation_job["status"] = "running"
+    _validation_job["started_at"] = datetime.now(timezone.utc).isoformat()
+    _validation_job["finished_at"] = None
+    _validation_job["exit_code"] = None
+    _validation_job["log_lines"] = []
+
+    command = [
+        "python",
+        "-m",
+        "mdap_small.cli",
+        "paper-validate-exact",
+        "--disks",
+        str(req.disks),
+        "--calibration-samples",
+        str(req.calibration_samples),
+        "--decorrelation-samples",
+        str(req.decorrelation_samples),
+        "--concurrency",
+        str(req.concurrency),
+        "--request-timeout-s",
+        str(req.request_timeout_s),
+        "--preflight-timeout-s",
+        str(req.preflight_timeout_s),
+        "--token-cutoffs",
+        req.token_cutoffs,
+        "--output-profile",
+        req.output_profile,
+        "--output-report",
+        req.output_report,
+    ]
+    if req.model_name:
+        command.extend(["--model-name", req.model_name])
+    if req.lock_to_best_model:
+        command.append("--lock-to-best-model")
+
+    _validation_job["command"] = " ".join(shlex.quote(x) for x in command)
+    _append_job_log(f"starting job {job_id}")
+    _append_job_log(f"command: {_validation_job['command']}")
+
+    if req.dry_run:
+        await _run_validation_dry()
+        _validation_task = None
+    else:
+        _validation_task = asyncio.create_task(_run_validation_subprocess(command))
+        _validation_task.add_done_callback(_on_validation_task_done)
+
+    return {
+        "ok": True,
+        "job_id": job_id,
+        "status": _validation_job["status"],
     }
 
 
