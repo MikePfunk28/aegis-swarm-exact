@@ -197,7 +197,18 @@
         } else {
           setGateUi(false, "Validation gate BLOCKED - run paper validation first.");
         }
-        gateOut.textContent = JSON.stringify(data, null, 2);
+        const checks = Array.isArray(data.checklist) ? data.checklist : [];
+        const lines = checks.map((c) => `${c.ok ? "PASS" : "FAIL"} | ${c.label} | expected=${c.expected} | actual=${c.actual}`);
+        gateOut.textContent = [
+          `gate_ok=${data.ok}`,
+          `report_path=${data.report_path}`,
+          "",
+          "Checklist:",
+          ...lines,
+          "",
+          "Messages:",
+          ...(data.messages || []),
+        ].join("\n");
       } catch (err) {
         setGateUi(false, "Validation gate unavailable.");
         gateOut.textContent = String(err);

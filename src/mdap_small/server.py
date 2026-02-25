@@ -197,6 +197,7 @@ async def validation_status():
         "report_path": gate.report_path,
         "messages": gate.messages,
         "summary": gate.summary,
+        "checklist": gate.checklist,
         "requirements": {
             "calibration_samples_per_model_min": 1000,
             "decorrelation_samples_min": 10000,
