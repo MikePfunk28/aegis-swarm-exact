@@ -53,6 +53,7 @@ class ApiTests(unittest.TestCase):
         self.assertIn("ok", gate_payload)
         self.assertIn("requirements", gate_payload)
         self.assertIn("checklist", gate_payload)
+        self.assertIn("readiness", gate_payload)
 
     def test_validation_job_dry_run(self):
         client = TestClient(app)

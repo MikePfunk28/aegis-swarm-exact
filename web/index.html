@@ -154,6 +154,7 @@
             <button id="valCancelBtn" class="secondary">Cancel Validation</button>
           </div>
           <div id="gateOut" class="mono">No validation report loaded.</div>
+          <div id="readyOut" class="mono">Readiness pending.</div>
           <div id="valOut" class="mono">No validation job yet.</div>
           <p class="tiny">Required: calibration (repairing, 2048, temp 0.1, >=1000), decorrelation (10K), strict run (red_flagging, 750, 0/0.1, k>=3), and p_step &gt; 0.5.</p>
         </section>
@@ -176,6 +177,7 @@
     const runBtn = byId("runBtn");
     const gateStatus = byId("gateStatus");
     const gateOut = byId("gateOut");
+    const readyOut = byId("readyOut");
     const valOut = byId("valOut");
     const runOut = byId("runOut");
     const replyEl = byId("reply");
@@ -199,6 +201,17 @@
         }
         const checks = Array.isArray(data.checklist) ? data.checklist : [];
         const lines = checks.map((c) => `${c.ok ? "PASS" : "FAIL"} | ${c.label} | expected=${c.expected} | actual=${c.actual}`);
+        const r = data.readiness || {};
+        const readinessLines = [
+          `${r.protocol_config_match ? "PASS" : "FAIL"} | Protocol Config Match`,
+          `${r.decorrelation_10k_done ? "PASS" : "FAIL"} | 10K Decorrelation Done`,
+          `${r.best_p_step_gt_0_5 ? "PASS" : "FAIL"} | Best p_step > 0.5`,
+          `${r.gate_pass ? "PASS" : "FAIL"} | Gate Pass`,
+          "",
+          "Blocked Reasons:",
+          ...((r.blocked_reasons || []).length ? r.blocked_reasons : ["none"]),
+        ];
+        readyOut.textContent = readinessLines.join("\n");
         gateOut.textContent = [
           `gate_ok=${data.ok}`,
           `report_path=${data.report_path}`,

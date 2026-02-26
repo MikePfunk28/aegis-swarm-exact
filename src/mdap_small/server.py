@@ -192,12 +192,45 @@ async def model_health():
 @app.get("/api/validation/status")
 async def validation_status():
     gate = load_and_check_report()
+    checks = gate.checklist
+    check_map = {
+        item.get("key"): bool(item.get("ok"))
+        for item in checks
+        if isinstance(item, dict)
+    }
+    protocol_keys = [
+        "calib.parser",
+        "calib.tokens",
+        "calib.temp",
+        "calib.samples",
+        "deco.parser",
+        "deco.tokens",
+        "deco.samples",
+        "strict.parser",
+        "strict.tokens",
+        "strict.temp0",
+        "strict.temp1",
+        "strict.parallel",
+        "strict.k",
+        "deco.collision_metric",
+    ]
+    protocol_config_match = all(check_map.get(k, False) for k in protocol_keys)
+    decorrelation_10k_done = check_map.get("deco.samples", False)
+    theorem_applicable = check_map.get("calib.p_gt_0_5", False)
+
     return {
         "ok": gate.ok,
         "report_path": gate.report_path,
         "messages": gate.messages,
         "summary": gate.summary,
         "checklist": gate.checklist,
+        "readiness": {
+            "protocol_config_match": protocol_config_match,
+            "decorrelation_10k_done": decorrelation_10k_done,
+            "best_p_step_gt_0_5": theorem_applicable,
+            "gate_pass": gate.ok,
+            "blocked_reasons": gate.messages,
+        },
         "requirements": {
             "calibration_samples_per_model_min": 1000,
             "decorrelation_samples_min": 10000,
